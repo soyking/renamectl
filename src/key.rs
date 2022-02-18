@@ -1,17 +1,6 @@
 use regex::Regex;
 
-pub fn extract_key_for_patterns<'a>(s: &'a str, patterns: Vec<&str>) -> String {
-    for pattern in patterns {
-        let key = extract_key_for_pattern(s, pattern);
-        if key.len() > 0 {
-            return key;
-        }
-    }
-
-    return "".to_string();
-}
-
-pub fn extract_key_for_pattern<'b>(s: &'b str, pattern: &str) -> String {
+pub fn extract_from_pattern<'b>(s: &'b str, pattern: &str) -> String {
     let re = Regex::new(pattern).unwrap();
     for cap in re.captures_iter(s) {
         let mut ret = Vec::<&str>::new();
@@ -25,6 +14,17 @@ pub fn extract_key_for_pattern<'b>(s: &'b str, pattern: &str) -> String {
         }
 
         return ret.join("-");
+    }
+
+    return "".to_string();
+}
+
+pub fn extract_from_patterns<'a>(s: &'a str, patterns: &Vec<&str>) -> String {
+    for pattern in patterns {
+        let key = extract_from_pattern(s, pattern);
+        if key.len() > 0 {
+            return key;
+        }
     }
 
     return "".to_string();
@@ -69,7 +69,7 @@ mod tests {
                 expected_key: "01-01",
             },
         ] {
-            let keys = super::extract_key_for_patterns(ts.s, ts.patterns);
+            let keys = super::extract_from_patterns(ts.s, &ts.patterns);
             assert_eq!(ts.expected_key, keys);
         }
     }
