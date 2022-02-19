@@ -1,4 +1,52 @@
+use crate::error::Error;
+use crate::error::Result;
 use regex::Regex;
+pub trait Extractor {
+    fn extract(&self, source: &str, patterns: &Vec<&str>) -> Result<String>;
+}
+
+pub struct RegexExtractor {}
+
+impl Extractor for RegexExtractor {
+    fn extract(&self, source: &str, patterns: &Vec<&str>) -> Result<String> {
+        for pattern in patterns {
+            let key = self.extract_one(source, pattern)?;
+            if key.len() > 0 {
+                return Ok(key);
+            }
+        }
+
+        return Ok("".to_string());
+    }
+}
+
+impl RegexExtractor {
+    fn extract_one(&self, source: &str, pattern: &str) -> Result<String> {
+        let re = match Regex::new(pattern) {
+            Ok(re) => re,
+            Err(e) => {
+                return Err(Error::new(e.to_string()));
+            }
+        };
+
+        for cap in re.captures_iter(source) {
+            let mut cap_iter = cap.iter();
+            cap_iter.next(); // ignore first one
+
+            let mut ret = Vec::<&str>::new();
+            for c in cap_iter {
+                match c.and_then(|x| Some(x.as_str())) {
+                    Some(x) => ret.push(x),
+                    None => (),
+                }
+            }
+
+            return Ok(ret.join("-"));
+        }
+
+        return Ok("".to_string());
+    }
+}
 
 pub fn extract_from_pattern<'b>(s: &'b str, pattern: &str) -> String {
     let re = Regex::new(pattern).unwrap();
@@ -34,8 +82,12 @@ pub fn extract_from_patterns<'a>(s: &'a str, patterns: &Vec<&str>) -> String {
 mod tests {
     use std::vec;
 
+    use crate::key::{Extractor, RegexExtractor};
+
     #[test]
-    fn test_extract_keys() {
+    fn test_regex_extractor() {
+        let e = RegexExtractor {};
+
         struct Testcase<'a> {
             s: &'a str,
             patterns: Vec<&'a str>,
@@ -50,7 +102,7 @@ mod tests {
             },
             Testcase {
                 s: "",
-                patterns: vec![""],
+                patterns: vec![r"\d{"],
                 expected_key:"",
             },
             Testcase {
@@ -69,8 +121,10 @@ mod tests {
                 expected_key: "01-01",
             },
         ] {
-            let keys = super::extract_from_patterns(ts.s, &ts.patterns);
-            assert_eq!(ts.expected_key, keys);
+            match e.extract(ts.s, &ts.patterns) {
+                Ok(k) => assert_eq!(ts.expected_key, &k),
+                Err(e) => println!("{}", e), // TODO: expected error
+            }
         }
     }
 }
