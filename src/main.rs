@@ -8,41 +8,37 @@ use std::fs;
 use std::path::PathBuf;
 
 use error::Result;
-use key::Extractor;
 
 fn run(dir: &str) -> Result<i32> {
     let patterns = vec![r"S(\d{2})E(\d{2})".to_string()];
     let key_extractor = key::RegexExtractor::new(patterns);
+    let fileinfo_constructor = file::FileInfoConstructor::new(&key_extractor);
 
     let subtitle_extensions = vec!["srt", "ass"];
-    let subtitle_filenames = file::filter_paths_with_extension(&dir, &subtitle_extensions);
-    // println!("{:?}", subtitle_filenames);
+    let mut subtitle_fileinfo_list = fileinfo_constructor.from_dir(&dir, &subtitle_extensions)?;
 
-    let mut subtitle_keys = HashMap::new();
-    for subtitle_filename in subtitle_filenames {
-        let subtitle_key = key_extractor.extract(&subtitle_filename)?;
-        // println!("{:?} => {:?}", subtitle_filename, subtitle_key);
-        subtitle_keys.insert(subtitle_key.to_string(), subtitle_filename.to_string());
+    let mut subtitles_map = HashMap::new();
+    while subtitle_fileinfo_list.len() > 0 {
+        let key = subtitle_fileinfo_list[0].key.clone();
+        subtitles_map.insert(key, subtitle_fileinfo_list.swap_remove(0)); // TODO: check existense
     }
 
     let movie_extensions = vec!["mkv", "mp4"];
-    let movie_filenames = file::filter_paths_with_extension(&dir, &movie_extensions);
-    // println!("{:?}", movie_filenames);
-    for movie_filename in movie_filenames {
-        let movie_key = key_extractor.extract(&movie_filename)?;
-        // println!("{:?} => {:?}", movie_filename, movie_key);
-        if let Some(subtitle_filename) = subtitle_keys.get(&movie_key) {
-            // println!("{:?} => {:?}", movie_filename, subtitle_filename);
-            let subtitle_path = PathBuf::from(subtitle_filename);
-            let mut subtitle_new_path = PathBuf::from(&movie_filename);
-            if let Some(subtitle_extention) = subtitle_path.extension() {
-                subtitle_new_path.set_extension(subtitle_extention);
-                println!(
-                    "{}\n{}\n{:?}\n{:?}",
-                    &movie_filename, movie_key, &subtitle_path, subtitle_new_path
-                );
-                fs::copy(subtitle_path, subtitle_new_path).ok();
-            }
+    let movie_fileinfo_list = fileinfo_constructor.from_dir(&dir, &movie_extensions)?;
+
+    for ref movie_fileinfo in movie_fileinfo_list {
+        if let Some(subtitle_fileinfo) = subtitles_map.get(&movie_fileinfo.key) {
+            let mut subtitle_new_path = PathBuf::from(&movie_fileinfo.filepath);
+            subtitle_new_path.set_extension(&subtitle_fileinfo.extension);
+
+            println!(
+                "{} -> {}\n\tfrom => {}\n\tto => {:?}",
+                &movie_fileinfo.filepath,
+                movie_fileinfo.key,
+                subtitle_fileinfo.filepath,
+                subtitle_new_path,
+            );
+            fs::copy(&subtitle_fileinfo.filepath, subtitle_new_path).ok();
         }
     }
 

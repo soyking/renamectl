@@ -3,22 +3,22 @@ use crate::key;
 use std::fs;
 use std::path;
 
-struct FileInfo {
-    filepath: String,
-    extension: String,
-    key: String,
+pub struct FileInfo {
+    pub filepath: String,
+    pub extension: String,
+    pub key: String,
 }
 
-struct FileInfoConstructor<'a> {
+pub struct FileInfoConstructor<'a> {
     key_extractor: &'a dyn key::Extractor,
 }
 
 impl FileInfoConstructor<'_> {
-    fn new(key_extractor: &dyn key::Extractor) -> FileInfoConstructor {
+    pub fn new(key_extractor: &dyn key::Extractor) -> FileInfoConstructor {
         return FileInfoConstructor { key_extractor };
     }
 
-    fn from_dir(&self, dir: &str, extensions: &Vec<&str>) -> Result<Vec<FileInfo>> {
+    pub fn from_dir(&self, dir: &str, extensions: &Vec<&str>) -> Result<Vec<FileInfo>> {
         let paths = match fs::read_dir(dir) {
             Ok(paths) => paths,
             Err(e) => return Err(Error::from_string(&e, "read dir")),
@@ -68,30 +68,11 @@ impl FileInfoConstructor<'_> {
     }
 }
 
-pub fn filter_paths_with_extension(dir: &str, extensions: &Vec<&str>) -> Vec<String> {
-    let paths = fs::read_dir(dir).unwrap();
-    let mut ret = Vec::<String>::new();
-
-    for path in paths {
-        let path = path.unwrap().path();
-        if let Some(path_extenstion) = path.extension() {
-            for &extension in extensions {
-                if path_extenstion == extension {
-                    ret.push(path.display().to_string());
-                    break;
-                }
-            }
-        }
-    }
-
-    return ret;
-}
-
 #[cfg(test)]
 mod tests {
     use super::FileInfoConstructor;
     use crate::error::Result;
-    use crate::key::{Extractor, RegexExtractor};
+    use crate::key::Extractor;
     use std::path;
 
     #[test]
