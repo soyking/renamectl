@@ -28,10 +28,11 @@ impl RegexExtractor {
     }
 
     fn extract_one(&self, source: &str, pattern: &str) -> Result<String> {
+        // TODO: no need to new everytime
         let re = match Regex::new(pattern) {
             Ok(re) => re,
             Err(e) => {
-                return Err(Error::new(e.to_string(), "new regex".to_string()));
+                return Err(Error::from_string(&e, "new regex"));
             }
         };
 
@@ -56,9 +57,8 @@ impl RegexExtractor {
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
-
     use crate::key::{Extractor, RegexExtractor};
+    use std::vec;
 
     #[test]
     fn test_regex_extractor() {

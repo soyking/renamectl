@@ -15,6 +15,10 @@ impl Error {
             message,
         };
     }
+
+    pub fn from_string(original_stringer: &dyn ToString, message: &str) -> Error {
+        return Error::new(original_stringer.to_string(), message.to_string());
+    }
 }
 
 impl fmt::Display for Error {
@@ -32,7 +36,7 @@ mod tests {
     use crate::error::Error;
 
     #[test]
-    fn test_wrap_error() {
+    fn test_error_new() {
         let e1 = "test1".to_string();
         let e1_clone = e1.clone();
         let e2 = "test2".to_string();
@@ -41,5 +45,22 @@ mod tests {
         let e = Error::new(e1, e2);
         println!("err message: {:?}", &e);
         assert_eq!(e2_clone + ", original error: " + &e1_clone, e.to_string());
+    }
+
+    #[test]
+    fn test_error_from_string() {
+        use std::io::{Error as IOError, ErrorKind};
+
+        let not_found = ErrorKind::NotFound;
+        let e1 = IOError::from(not_found);
+
+        let e2 = "test1";
+
+        let e = Error::from_string(&e1, &e2);
+        println!("err message: {:?}", &e);
+        assert_eq!(
+            e2.to_string() + ", original error: entity not found",
+            e.to_string()
+        );
     }
 }
