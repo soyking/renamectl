@@ -21,11 +21,15 @@ impl Extractor for RegexExtractor {
 }
 
 impl RegexExtractor {
+    pub fn new() -> RegexExtractor {
+        return RegexExtractor {};
+    }
+
     fn extract_one(&self, source: &str, pattern: &str) -> Result<String> {
         let re = match Regex::new(pattern) {
             Ok(re) => re,
             Err(e) => {
-                return Err(Error::new(e.to_string()));
+                return Err(Error::new(e.to_string(), "new regex".to_string()));
             }
         };
 
@@ -46,36 +50,6 @@ impl RegexExtractor {
 
         return Ok("".to_string());
     }
-}
-
-pub fn extract_from_pattern<'b>(s: &'b str, pattern: &str) -> String {
-    let re = Regex::new(pattern).unwrap();
-    for cap in re.captures_iter(s) {
-        let mut ret = Vec::<&str>::new();
-        let mut cap_iter = cap.iter();
-        cap_iter.next(); // ignore first one
-        for c in cap_iter {
-            match c.and_then(|x| Some(x.as_str())) {
-                Some(x) => ret.push(x),
-                None => {}
-            }
-        }
-
-        return ret.join("-");
-    }
-
-    return "".to_string();
-}
-
-pub fn extract_from_patterns<'a>(s: &'a str, patterns: &Vec<&str>) -> String {
-    for pattern in patterns {
-        let key = extract_from_pattern(s, pattern);
-        if key.len() > 0 {
-            return key;
-        }
-    }
-
-    return "".to_string();
 }
 
 #[cfg(test)]
