@@ -11,9 +11,8 @@ use error::Result;
 use key::Extractor;
 
 fn run(dir: &str) -> Result<i32> {
-    let key_extractor = key::RegexExtractor::new();
-
-    let patterns = vec![r"S(\d{2})E(\d{2})"];
+    let patterns = vec![r"S(\d{2})E(\d{2})".to_string()];
+    let key_extractor = key::RegexExtractor::new(patterns);
 
     let subtitle_extensions = vec!["srt", "ass"];
     let subtitle_filenames = file::filter_paths_with_extension(&dir, &subtitle_extensions);
@@ -21,7 +20,7 @@ fn run(dir: &str) -> Result<i32> {
 
     let mut subtitle_keys = HashMap::new();
     for subtitle_filename in subtitle_filenames {
-        let subtitle_key = key_extractor.extract(&subtitle_filename, &patterns)?;
+        let subtitle_key = key_extractor.extract(&subtitle_filename)?;
         // println!("{:?} => {:?}", subtitle_filename, subtitle_key);
         subtitle_keys.insert(subtitle_key.to_string(), subtitle_filename.to_string());
     }
@@ -30,7 +29,7 @@ fn run(dir: &str) -> Result<i32> {
     let movie_filenames = file::filter_paths_with_extension(&dir, &movie_extensions);
     // println!("{:?}", movie_filenames);
     for movie_filename in movie_filenames {
-        let movie_key = key_extractor.extract(&movie_filename, &patterns)?;
+        let movie_key = key_extractor.extract(&movie_filename)?;
         // println!("{:?} => {:?}", movie_filename, movie_key);
         if let Some(subtitle_filename) = subtitle_keys.get(&movie_key) {
             // println!("{:?} => {:?}", movie_filename, subtitle_filename);

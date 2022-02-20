@@ -2,15 +2,17 @@ use crate::error::Error;
 use crate::error::Result;
 use regex::Regex;
 pub trait Extractor {
-    fn extract(&self, source: &str, patterns: &Vec<&str>) -> Result<String>;
+    fn extract(&self, source: &str) -> Result<String>;
 }
 
-pub struct RegexExtractor {}
+pub struct RegexExtractor {
+    patterns: Vec<String>,
+}
 
 impl Extractor for RegexExtractor {
-    fn extract(&self, source: &str, patterns: &Vec<&str>) -> Result<String> {
-        for pattern in patterns {
-            let key = self.extract_one(source, pattern)?;
+    fn extract(&self, source: &str) -> Result<String> {
+        for pattern in &self.patterns {
+            let key = self.extract_one(source, &pattern)?;
             if key.len() > 0 {
                 return Ok(key);
             }
@@ -21,8 +23,8 @@ impl Extractor for RegexExtractor {
 }
 
 impl RegexExtractor {
-    pub fn new() -> RegexExtractor {
-        return RegexExtractor {};
+    pub fn new(patterns: Vec<String>) -> RegexExtractor {
+        return RegexExtractor { patterns };
     }
 
     fn extract_one(&self, source: &str, pattern: &str) -> Result<String> {
@@ -60,11 +62,9 @@ mod tests {
 
     #[test]
     fn test_regex_extractor() {
-        let e = RegexExtractor {};
-
         struct Testcase<'a> {
             s: &'a str,
-            patterns: Vec<&'a str>,
+            patterns: Vec<String>,
             expected_key: &'a str,
         }
 
@@ -76,26 +76,27 @@ mod tests {
             },
             Testcase {
                 s: "",
-                patterns: vec![r"\d{"],
+                patterns: vec![r"\d{".to_string()],
                 expected_key:"",
             },
             Testcase {
                 s: "",
-                patterns: vec![r"S(\d{2})E(\d{2})", r"(\d{4})-(\d{2})-(\d{2})"],
+                patterns: vec![r"S(\d{2})E(\d{2})".to_string(), r"(\d{4})-(\d{2})-(\d{2})".to_string()],
                 expected_key:"",
             },
             Testcase {
                 s: "2021-02-14",
-                patterns: vec![r"S(\d{2})E(\d{2})", r"(\d{4})-(\d{2})-(\d{2})"],
+                patterns: vec![r"S(\d{2})E(\d{2})".to_string(), r"(\d{4})-(\d{2})-(\d{2})".to_string()],
                 expected_key: "2021-02-14",
             },
             Testcase {
                 s: "PBS.The.Brain.with.David.Eagleman.S01E01.What.is.Reality.720p.x264.HEVCguy.eng.srt",
-                patterns: vec![r"S(\d{2})E(\d{2})", r"(\d{4})-(\d{2})-(\d{2})"],
+                patterns: vec![r"S(\d{2})E(\d{2})".to_string(), r"(\d{4})-(\d{2})-(\d{2})".to_string()],
                 expected_key: "01-01",
             },
         ] {
-            match e.extract(ts.s, &ts.patterns) {
+        let e = RegexExtractor::new(ts.patterns);
+            match e.extract(ts.s) {
                 Ok(k) => assert_eq!(ts.expected_key, &k),
                 Err(e) => println!("{}", e), // TODO: expected error
             }
