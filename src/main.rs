@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::process::exit;
 
 use error::Result;
 
@@ -47,5 +48,12 @@ fn run(dir: &str) -> Result<i32> {
 
 fn main() {
     let dir = env::args().nth(1).expect("missing dir");
-    run(&dir).unwrap();
+
+    match run(&dir) {
+        Ok(_) => println!("done"),
+        Err(e) => {
+            println!("catch some error: {:?}", e);
+            exit(1);
+        }
+    };
 }

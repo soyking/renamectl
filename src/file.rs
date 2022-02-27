@@ -1,4 +1,6 @@
-use crate::error::{Error, Result};
+use anyhow::Context;
+
+use crate::error::Result;
 use crate::key;
 use std::fs;
 use std::path;
@@ -19,10 +21,7 @@ impl FileInfoConstructor<'_> {
     }
 
     pub fn from_dir(&self, dir: &str, extensions: &Vec<&str>) -> Result<Vec<FileInfo>> {
-        let paths = match fs::read_dir(dir) {
-            Ok(paths) => paths,
-            Err(e) => return Err(Error::from_string(&e, "read dir")),
-        };
+        let paths = fs::read_dir(dir).with_context(|| format!("read dir {}", dir))?;
 
         return self.from_paths(paths, extensions);
     }
@@ -30,10 +29,9 @@ impl FileInfoConstructor<'_> {
     fn from_paths(&self, paths: fs::ReadDir, extensions: &Vec<&str>) -> Result<Vec<FileInfo>> {
         let mut ret = Vec::<FileInfo>::new();
         for path in paths {
-            let filepath = match path {
-                Ok(path) => path.path(),
-                Err(e) => return Err(Error::from_string(&e, "get path")),
-            };
+            let filepath = path
+                .with_context(|| format!("get filepath from dir entry"))?
+                .path();
 
             if let Some(fileinfo) = self.gen_fileinfo(filepath, extensions)? {
                 ret.push(fileinfo);
@@ -73,7 +71,7 @@ mod tests {
     use super::FileInfoConstructor;
     use crate::error::Result;
     use crate::key::Extractor;
-    use std::path;
+    use std::{path, vec};
 
     #[test]
     fn test_fileinfo_constructor() {

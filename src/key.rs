@@ -1,5 +1,5 @@
-use crate::error::Error;
 use crate::error::Result;
+use anyhow::Context;
 use regex::Regex;
 pub trait Extractor {
     fn extract(&self, source: &str) -> Result<String>;
@@ -29,12 +29,7 @@ impl RegexExtractor {
 
     fn extract_one(&self, source: &str, pattern: &str) -> Result<String> {
         // TODO: no need to new everytime
-        let re = match Regex::new(pattern) {
-            Ok(re) => re,
-            Err(e) => {
-                return Err(Error::from_string(&e, "new regex"));
-            }
-        };
+        let re = Regex::new(pattern).with_context(|| format!("new regex"))?;
 
         for cap in re.captures_iter(source) {
             let mut cap_iter = cap.iter();
