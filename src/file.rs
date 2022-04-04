@@ -6,7 +6,7 @@ use std::fs;
 use std::path;
 
 pub struct FileInfo {
-    pub filepath: String,
+    pub filepath: String, // full file path
     pub extension: String,
     pub key: String,
 }
@@ -50,13 +50,16 @@ impl FileInfoConstructor<'_> {
             for &extension in extensions {
                 if filepath_extenstion == extension {
                     if let Some(filepath_str) = filepath.to_str() {
-                        let key = self.key_extractor.extract(filepath_str)?;
-
-                        return Ok(Some(FileInfo {
-                            filepath: filepath.display().to_string(),
-                            extension: extension.to_string(),
-                            key,
-                        }));
+                        if let Some(key) = self.key_extractor.extract(filepath_str) {
+                            return Ok(Some(FileInfo {
+                                filepath: filepath.display().to_string(),
+                                extension: extension.to_string(),
+                                key,
+                            }));
+                        } else {
+                            // debug
+                            println!("skip filepath: {:?}", filepath_str)
+                        }
                     }
                 }
             }
@@ -69,7 +72,6 @@ impl FileInfoConstructor<'_> {
 #[cfg(test)]
 mod tests {
     use super::FileInfoConstructor;
-    use crate::error::Result;
     use crate::key::Extractor;
     use std::{path, vec};
 
@@ -79,8 +81,8 @@ mod tests {
             key: String,
         }
         impl Extractor for TestKeyExtractor {
-            fn extract(&self, _: &str) -> Result<String> {
-                return Ok(self.key.clone());
+            fn extract(&self, _: &str) -> Option<String> {
+                return Some(self.key.clone());
             }
         }
 
