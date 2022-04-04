@@ -12,7 +12,7 @@ use error::Result;
 
 fn run(dir: &str) -> Result<i32> {
     let patterns = vec![r"S(\d{2})E(\d{2})".to_string()];
-    let key_extractor = key::RegexExtractor::new(patterns);
+    let key_extractor = key::RegexExtractor::new(patterns)?;
     let fileinfo_constructor = file::FileInfoConstructor::new(&key_extractor);
 
     let subtitle_extensions = vec!["srt", "ass"];
