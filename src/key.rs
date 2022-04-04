@@ -1,6 +1,7 @@
-use crate::error::Result;
 use anyhow::Context;
 use regex::Regex;
+
+use crate::error::Result;
 
 pub trait Extractor {
     fn extract(&self, source: &str) -> Option<String>;
@@ -58,8 +59,9 @@ impl RegexExtractor {
 
 #[cfg(test)]
 mod tests {
-    use crate::key::{Extractor, RegexExtractor};
     use std::vec;
+
+    use crate::key::{Extractor, RegexExtractor};
 
     #[test]
     fn test_bad_regex_extractor() {

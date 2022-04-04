@@ -1,10 +1,12 @@
+use std::fs;
+use std::path;
+
 use anyhow::Context;
 
 use crate::error::Result;
 use crate::key;
-use std::fs;
-use std::path;
 
+#[derive(Debug)]
 pub struct FileInfo {
     pub filepath: String, // full file path
     pub extension: String,
@@ -48,21 +50,31 @@ impl FileInfoConstructor<'_> {
     ) -> Result<Option<FileInfo>> {
         if let Some(filepath_extenstion) = filepath.extension() {
             for &extension in extensions {
-                if filepath_extenstion == extension {
-                    if let Some(filepath_str) = filepath.to_str() {
-                        if let Some(key) = self.key_extractor.extract(filepath_str) {
-                            return Ok(Some(FileInfo {
-                                filepath: filepath.display().to_string(),
-                                extension: extension.to_string(),
-                                key,
-                            }));
-                        } else {
-                            // debug
-                            println!("skip filepath: {:?}", filepath_str)
-                        }
+                if filepath_extenstion != extension {
+                    continue;
+                }
+
+                if let Some(filepath_str) = filepath.to_str() {
+                    if let Some(key) = self.key_extractor.extract(filepath_str) {
+                        return Ok(Some(FileInfo {
+                            filepath: filepath_str.to_string(),
+                            extension: extension.to_string(),
+                            key,
+                        }));
+                    } else {
+                        // debug
+                        println!("extractor returns none, skip filepath {:?}", filepath_str);
+
+                        return Ok(None);
                     }
                 }
             }
+
+            // debug
+            println!("does not match any extensions, skip file {:?}", filepath);
+        } else {
+            // debug
+            println!("without extension, skip file {:?}", filepath);
         }
 
         Ok(None)
@@ -71,24 +83,64 @@ impl FileInfoConstructor<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::{path, vec};
+
     use super::FileInfoConstructor;
     use crate::key::Extractor;
-    use std::{path, vec};
+
+    struct TestKeyExtractor {
+        key: Option<String>,
+    }
+    impl Extractor for TestKeyExtractor {
+        fn extract(&self, _: &str) -> Option<String> {
+            return self.key.clone();
+        }
+    }
+
+    #[test]
+    fn test_gen_fileinfo_without_extension() {
+        let key_extractor = TestKeyExtractor { key: None };
+
+        let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
+
+        let filepath = "test";
+        let fileinfo = fileinfo_constructor
+            .gen_fileinfo(path::PathBuf::from(filepath.to_string()), &vec!["txt"]);
+        assert_eq!(true, fileinfo.is_ok());
+        assert_eq!(true, fileinfo.unwrap().is_none());
+    }
+
+    #[test]
+    fn test_gen_fileinfo_extension_miss() {
+        let key_extractor = TestKeyExtractor { key: None };
+
+        let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
+
+        let filepath = "test.txt";
+        let fileinfo = fileinfo_constructor
+            .gen_fileinfo(path::PathBuf::from(filepath.to_string()), &vec!["png"]);
+        assert_eq!(true, fileinfo.is_ok());
+        assert_eq!(true, fileinfo.unwrap().is_none());
+    }
+
+    #[test]
+    fn test_gen_fileinfo_extractor_none() {
+        let key_extractor = TestKeyExtractor { key: None };
+
+        let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
+
+        let filepath = "test.txt";
+        let fileinfo = fileinfo_constructor
+            .gen_fileinfo(path::PathBuf::from(filepath.to_string()), &vec!["txt"]);
+        assert_eq!(true, fileinfo.is_ok());
+        assert_eq!(true, fileinfo.unwrap().is_none());
+    }
 
     #[test]
     fn test_fileinfo_constructor() {
-        struct TestKeyExtractor {
-            key: String,
-        }
-        impl Extractor for TestKeyExtractor {
-            fn extract(&self, _: &str) -> Option<String> {
-                return Some(self.key.clone());
-            }
-        }
-
         let key = "test_key";
         let key_extractor = TestKeyExtractor {
-            key: key.to_string(),
+            key: Some(key.to_string()),
         };
 
         let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
@@ -102,6 +154,7 @@ mod tests {
         assert_eq!(true, fileinfo.is_some());
 
         let fileinfo = fileinfo.unwrap();
+        println!("return file info: {:?}", fileinfo);
         assert_eq!(filepath.to_string(), fileinfo.filepath);
         assert_eq!("txt", fileinfo.extension);
         assert_eq!(key, fileinfo.key);

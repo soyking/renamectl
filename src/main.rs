@@ -1,14 +1,13 @@
-mod error;
-mod file;
-mod key;
-
+use error::Result;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::exit;
 
-use error::Result;
+mod error;
+mod file;
+mod key;
 
 fn run(dir: &str) -> Result<i32> {
     let patterns = vec![r"S(\d{2})E(\d{2})".to_string()];
