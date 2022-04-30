@@ -1,13 +1,33 @@
+#![feature(unix_chown)]
 use error::Result;
+
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::os::unix::fs as unixfs;
+use std::os::unix::prelude::MetadataExt;
 use std::path::PathBuf;
 use std::process::exit;
 
 mod error;
 mod file;
 mod key;
+
+fn copy_file<'a>(from: &'a str, to: &'a str) -> Result<'a, u64> {
+    fs::copy(from, to)?;
+
+    let meta = fs::metadata(from)?;
+    let user_id = meta.uid();
+    let group_id = meta.gid();
+    println!("uid: {}, gid: {}", user_id, group_id);
+    unixfs::chown(to, Some(user_id), Some(group_id))?;
+
+    let perms = fs::metadata(from)?.permissions();
+    println!("perm: {:?}", perms);
+    fs::set_permissions(to, perms)?;
+
+    Ok(0)
+}
 
 fn run(dir: &str) -> Result<i32> {
     let patterns = vec![r"S(\d{2})E(\d{2})".to_string()];
@@ -38,7 +58,12 @@ fn run(dir: &str) -> Result<i32> {
                 subtitle_fileinfo.filepath,
                 subtitle_new_path,
             );
-            fs::copy(&subtitle_fileinfo.filepath, subtitle_new_path).ok();
+
+            copy_file(
+                &subtitle_fileinfo.filepath,
+                subtitle_new_path.to_str().unwrap(),
+            )
+            .ok();
         }
     }
 
