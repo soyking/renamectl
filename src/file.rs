@@ -54,7 +54,8 @@ impl FileInfoConstructor<'_> {
                     continue;
                 }
 
-                if let Some(filepath_str) = filepath.to_str() {
+                if let Some(filepath_str) = filepath.file_name() {
+                    let filepath_str = filepath_str.to_str().unwrap();
                     if let Some(key) = self.key_extractor.extract(filepath_str) {
                         return Ok(Some(FileInfo {
                             filepath: filepath_str.to_string(),
@@ -71,7 +72,10 @@ impl FileInfoConstructor<'_> {
             }
 
             // debug
-            println!("does not match any extensions, skip file {:?}", filepath);
+            println!(
+                "does not match any extensions, skip file {:?}, extension: {:?}",
+                filepath, filepath_extenstion
+            );
         } else {
             // debug
             println!("without extension, skip file {:?}", filepath);

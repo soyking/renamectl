@@ -30,12 +30,19 @@ fn copy_file<'a>(from: &'a str, to: &'a str) -> Result<'a, u64> {
 }
 
 fn run(dir: &str) -> Result<i32> {
-    let patterns = vec![r"S(\d{2})E(\d{2})".to_string()];
+    let patterns = vec![
+        r"(?i)S0(\d{1})(?i)E(\d{2})".to_string(), // S01E01
+        r"(?i)S(\d{1})(?i)E(\d{2})".to_string(),  // S1E01
+        r"(\d{1})(?i)x(\d{2})".to_string(),       // 1x01
+        r"(\d{1})(\d{2})".to_string(),            // 101
+    ];
     let key_extractor = key::RegexExtractor::new(patterns)?;
     let fileinfo_constructor = file::FileInfoConstructor::new(&key_extractor);
 
     let subtitle_extensions = vec!["srt", "ass"];
     let mut subtitle_fileinfo_list = fileinfo_constructor.from_dir(&dir, &subtitle_extensions)?;
+    // debug
+    println!("subtitle files: {:?}", subtitle_fileinfo_list);
 
     let mut subtitles_map = HashMap::new();
     while subtitle_fileinfo_list.len() > 0 {
@@ -45,6 +52,7 @@ fn run(dir: &str) -> Result<i32> {
 
     let movie_extensions = vec!["mkv", "mp4"];
     let movie_fileinfo_list = fileinfo_constructor.from_dir(&dir, &movie_extensions)?;
+    println!("movie files: {:?}", movie_fileinfo_list);
 
     for ref movie_fileinfo in movie_fileinfo_list {
         if let Some(subtitle_fileinfo) = subtitles_map.get(&movie_fileinfo.key) {
