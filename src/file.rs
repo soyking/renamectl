@@ -54,19 +54,24 @@ impl FileInfoConstructor<'_> {
                     continue;
                 }
 
-                if let Some(filepath_str) = filepath.file_name() {
-                    let filepath_str = filepath_str.to_str().unwrap();
-                    if let Some(key) = self.key_extractor.extract(filepath_str) {
-                        return Ok(Some(FileInfo {
-                            filepath: filepath_str.to_string(),
-                            extension: extension.to_string(),
-                            key,
-                        }));
-                    } else {
-                        // debug
-                        println!("extractor returns none, skip filepath {:?}", filepath_str);
+                if let Some(full_filepath_str) = filepath.to_str() {
+                    if let Some(filename_str) = filepath.file_name() {
+                        let filename_str = filename_str.to_str().unwrap();
+                        if let Some(key) = self.key_extractor.extract(filename_str) {
+                            return Ok(Some(FileInfo {
+                                filepath: full_filepath_str.to_string(),
+                                extension: extension.to_string(),
+                                key,
+                            }));
+                        } else {
+                            // debug
+                            println!(
+                                "extractor returns none, skip filepath {:?}",
+                                full_filepath_str
+                            );
 
-                        return Ok(None);
+                            return Ok(None);
+                        }
                     }
                 }
             }
