@@ -22,13 +22,13 @@ impl FileInfoConstructor<'_> {
         return FileInfoConstructor { key_extractor };
     }
 
-    pub fn from_dir(&self, dir: &str, extensions: &Vec<&str>) -> Result<Vec<FileInfo>> {
+    pub fn from_dir(&self, dir: &str, extensions: &Vec<String>) -> Result<Vec<FileInfo>> {
         let paths = fs::read_dir(dir).with_context(|| format!("read dir {}", dir))?;
 
         return self.from_paths(paths, extensions);
     }
 
-    fn from_paths(&self, paths: fs::ReadDir, extensions: &Vec<&str>) -> Result<Vec<FileInfo>> {
+    fn from_paths(&self, paths: fs::ReadDir, extensions: &Vec<String>) -> Result<Vec<FileInfo>> {
         let mut ret = Vec::<FileInfo>::new();
         for path in paths {
             let filepath = path
@@ -46,11 +46,11 @@ impl FileInfoConstructor<'_> {
     fn gen_fileinfo(
         &self,
         filepath: path::PathBuf,
-        extensions: &Vec<&str>,
+        extensions: &Vec<String>,
     ) -> Result<Option<FileInfo>> {
         if let Some(filepath_extenstion) = filepath.extension() {
-            for &extension in extensions {
-                if filepath_extenstion != extension {
+            for extension in extensions {
+                if filepath_extenstion != extension.as_str() {
                     continue;
                 }
 
@@ -113,8 +113,10 @@ mod tests {
         let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
 
         let filepath = "test";
-        let fileinfo = fileinfo_constructor
-            .gen_fileinfo(path::PathBuf::from(filepath.to_string()), &vec!["txt"]);
+        let fileinfo = fileinfo_constructor.gen_fileinfo(
+            path::PathBuf::from(filepath.to_string()),
+            &vec!["txt".to_string()],
+        );
         assert_eq!(true, fileinfo.is_ok());
         assert_eq!(true, fileinfo.unwrap().is_none());
     }
@@ -126,8 +128,10 @@ mod tests {
         let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
 
         let filepath = "test.txt";
-        let fileinfo = fileinfo_constructor
-            .gen_fileinfo(path::PathBuf::from(filepath.to_string()), &vec!["png"]);
+        let fileinfo = fileinfo_constructor.gen_fileinfo(
+            path::PathBuf::from(filepath.to_string()),
+            &vec!["png".to_string()],
+        );
         assert_eq!(true, fileinfo.is_ok());
         assert_eq!(true, fileinfo.unwrap().is_none());
     }
@@ -139,8 +143,10 @@ mod tests {
         let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
 
         let filepath = "test.txt";
-        let fileinfo = fileinfo_constructor
-            .gen_fileinfo(path::PathBuf::from(filepath.to_string()), &vec!["txt"]);
+        let fileinfo = fileinfo_constructor.gen_fileinfo(
+            path::PathBuf::from(filepath.to_string()),
+            &vec!["txt".to_string()],
+        );
         assert_eq!(true, fileinfo.is_ok());
         assert_eq!(true, fileinfo.unwrap().is_none());
     }
@@ -155,8 +161,10 @@ mod tests {
         let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
 
         let filepath = "./dir/test.txt";
-        let fileinfo = fileinfo_constructor
-            .gen_fileinfo(path::PathBuf::from(filepath.to_string()), &vec!["txt"]);
+        let fileinfo = fileinfo_constructor.gen_fileinfo(
+            path::PathBuf::from(filepath.to_string()),
+            &vec!["txt".to_string()],
+        );
         assert_eq!(true, fileinfo.is_ok());
 
         let fileinfo = fileinfo.unwrap();
