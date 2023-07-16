@@ -16,11 +16,11 @@ fn copy_file<'a>(from: &'a str, to: &'a str) -> Result<'a, u64> {
     let meta = fs::metadata(from)?;
     let user_id = meta.uid();
     let group_id = meta.gid();
-    debug!("uid: {}, gid: {}", user_id, group_id);
+    debug!("file: {}, uid: {}, gid: {}", from, user_id, group_id);
     unixfs::chown(to, Some(user_id), Some(group_id))?;
 
     let perms = fs::metadata(from)?.permissions();
-    debug!("perm: {:?}", perms);
+    debug!("file: {}, perm: {:?}", from, perms);
     fs::set_permissions(to, perms)?;
 
     Ok(0)
@@ -48,40 +48,46 @@ pub fn run() -> Result<'static, ()> {
     debug!("get config: {:?}", c);
 
     let key_extractor = key::RegexExtractor::new(&c.patterns)?;
-    let fileinfo_constructor = file::FileInfoConstructor::new(&key_extractor);
+    let file_info_constructor = file::FileInfoConstructor::new(&key_extractor);
 
-    info!("start get subtitle file info");
-    let mut subtitle_fileinfo_list = fileinfo_constructor.from_dir(&c.dir, &c.sub_exts)?;
-    info!("subtitle file info: {:?}", subtitle_fileinfo_list);
+    let mut subtitle_file_info_list = file_info_constructor.from_dir(&c.dir, &c.sub_exts)?;
+    info!("subtitle file info: {:?}", subtitle_file_info_list);
+
+    let episode_file_info_list = file_info_constructor.from_dir(&c.dir, &c.ep_exts)?;
+    info!("episode file info: {:?}", episode_file_info_list);
 
     let mut subtitles_map = HashMap::new();
-    while subtitle_fileinfo_list.len() > 0 {
-        let key = subtitle_fileinfo_list[0].key.clone();
-        subtitles_map.insert(key, subtitle_fileinfo_list.swap_remove(0)); // TODO: check existense
+    while let Some(file_info) = subtitle_file_info_list.pop() {
+        let key = file_info.key.clone();
+        let subtitle_file_info_list = subtitles_map.entry(key).or_insert(vec![]);
+        subtitle_file_info_list.push(file_info);
     }
 
-    info!("start get episode file info");
-    let episode_fileinfo_list = fileinfo_constructor.from_dir(&c.dir, &c.ep_exts)?;
-    info!("episode file info: {:?}", episode_fileinfo_list);
+    for ref episode_file_info in episode_file_info_list {
+        if let Some(subtitle_file_info_list) = subtitles_map.get(&episode_file_info.key) {
+            for subtitle_file_info in subtitle_file_info_list {
+                let mut subtitle_new_path = PathBuf::from(&episode_file_info.filepath);
+                subtitle_new_path.set_extension(&subtitle_file_info.extension);
+                let subtitle_new_path = subtitle_new_path.to_str().unwrap();
 
-    for ref episode_fileinfo in episode_fileinfo_list {
-        if let Some(subtitle_fileinfo) = subtitles_map.get(&episode_fileinfo.key) {
-            let mut subtitle_new_path = PathBuf::from(&episode_fileinfo.filepath);
-            subtitle_new_path.set_extension(&subtitle_fileinfo.extension);
+                if subtitle_new_path == subtitle_file_info.filepath.as_str() {
+                    debug!("exclude existed file info: {:?}", subtitle_file_info);
 
-            info!(
-                "{} -> {}\n\tfrom => {}\n\tto => {:?}",
-                &episode_fileinfo.filepath,
-                episode_fileinfo.key,
-                subtitle_fileinfo.filepath,
-                subtitle_new_path,
-            );
+                    continue;
+                }
 
-            copy_file(
-                &subtitle_fileinfo.filepath,
-                subtitle_new_path.to_str().unwrap(),
-            )
-            .ok();
+                info!(
+                    "\n[episode]: {}, key: {}\n\t{}\n\t↓\n\t{}",
+                    episode_file_info.filepath,
+                    episode_file_info.key,
+                    subtitle_file_info.filepath,
+                    subtitle_new_path,
+                );
+
+                copy_file(&subtitle_file_info.filepath, subtitle_new_path).unwrap();
+
+                break;
+            }
         }
     }
 

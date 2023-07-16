@@ -40,8 +40,8 @@ impl FileInfoConstructor<'_> {
                 .with_context(|| format!("get filepath from dir entry"))?
                 .path();
 
-            match self.gen_fileinfo(&file_path, extensions) {
-                Ok(fileinfo) => file_info_list.push(fileinfo),
+            match self.gen_file_info(&file_path, extensions) {
+                Ok(file_info) => file_info_list.push(file_info),
                 Err(err) => debug!("failed to gen file({:?}) info: {:?}", file_path, err),
             }
         }
@@ -49,7 +49,7 @@ impl FileInfoConstructor<'_> {
         Ok(file_info_list)
     }
 
-    fn gen_fileinfo(
+    fn gen_file_info(
         &self,
         file_path: &path::PathBuf,
         extensions: &Vec<String>,
@@ -106,67 +106,67 @@ mod tests {
     }
 
     #[test]
-    fn test_gen_fileinfo_without_extension() {
+    fn test_gen_file_info_without_extension() {
         let key_extractor = TestKeyExtractor { key: None };
 
-        let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
+        let file_info_constructor = FileInfoConstructor::new(&key_extractor);
 
         let filepath = "test";
-        let fileinfo = fileinfo_constructor.gen_fileinfo(
+        let file_info = file_info_constructor.gen_file_info(
             &path::PathBuf::from(filepath.to_string()),
             &vec!["txt".to_string()],
         );
-        assert_eq!(false, fileinfo.is_ok());
+        assert_eq!(false, file_info.is_ok());
     }
 
     #[test]
-    fn test_gen_fileinfo_extension_miss() {
+    fn test_gen_file_info_extension_miss() {
         let key_extractor = TestKeyExtractor { key: None };
 
-        let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
+        let file_info_constructor = FileInfoConstructor::new(&key_extractor);
 
         let filepath = "test.txt";
-        let fileinfo = fileinfo_constructor.gen_fileinfo(
+        let file_info = file_info_constructor.gen_file_info(
             &path::PathBuf::from(filepath.to_string()),
             &vec!["png".to_string()],
         );
-        assert_eq!(false, fileinfo.is_ok());
+        assert_eq!(false, file_info.is_ok());
     }
 
     #[test]
-    fn test_gen_fileinfo_extractor_none() {
+    fn test_gen_file_info_extractor_none() {
         let key_extractor = TestKeyExtractor { key: None };
 
-        let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
+        let file_info_constructor = FileInfoConstructor::new(&key_extractor);
 
         let filepath = "test.txt";
-        let fileinfo = fileinfo_constructor.gen_fileinfo(
+        let file_info = file_info_constructor.gen_file_info(
             &path::PathBuf::from(filepath.to_string()),
             &vec!["txt".to_string()],
         );
-        assert_eq!(false, fileinfo.is_ok());
+        assert_eq!(false, file_info.is_ok());
     }
 
     #[test]
-    fn test_fileinfo_constructor() {
+    fn test_file_info_constructor() {
         let key = "test_key";
         let key_extractor = TestKeyExtractor {
             key: Some(key.to_string()),
         };
 
-        let fileinfo_constructor = FileInfoConstructor::new(&key_extractor);
+        let file_info_constructor = FileInfoConstructor::new(&key_extractor);
 
         let filepath = "./dir/test.txt";
-        let fileinfo = fileinfo_constructor.gen_fileinfo(
+        let file_info = file_info_constructor.gen_file_info(
             &path::PathBuf::from(filepath.to_string()),
             &vec!["txt".to_string()],
         );
-        assert_eq!(true, fileinfo.is_ok());
+        assert_eq!(true, file_info.is_ok());
 
-        let fileinfo = fileinfo.unwrap();
-        println!("return file info: {:?}", fileinfo);
-        assert_eq!(filepath.to_string(), fileinfo.filepath);
-        assert_eq!("txt", fileinfo.extension);
-        assert_eq!(key, fileinfo.key);
+        let file_info = file_info.unwrap();
+        println!("return file info: {:?}", file_info);
+        assert_eq!(filepath.to_string(), file_info.filepath);
+        assert_eq!("txt", file_info.extension);
+        assert_eq!(key, file_info.key);
     }
 }
