@@ -3,5 +3,4 @@ use anyhow::Result as AnyhowResult;
 
 pub type Result<'a, T> = AnyhowResult<T>;
 
-#[allow(dead_code)]
 pub type Error = AnyhowError;

@@ -1,12 +1,14 @@
-use crate::error::Result;
-use crate::file;
-use crate::key;
-use clap::Parser;
 use std::collections::HashMap;
 use std::fs;
 use std::os::unix::fs as unixfs;
 use std::os::unix::prelude::MetadataExt;
 use std::path::PathBuf;
+
+use clap::Parser;
+
+use crate::error::Result;
+use crate::file;
+use crate::key;
 
 fn copy_file<'a>(from: &'a str, to: &'a str) -> Result<'a, u64> {
     fs::copy(from, to)?;
@@ -38,15 +40,19 @@ pub struct Config {
     #[arg(long = "sub_ext", default_values(&["srt", "ass"]))]
     pub sub_exts: Vec<String>,
     #[arg(long = "ep_ext", default_values(&["mkv", "mp4"]))]
-    pub episode_exts: Vec<String>,
+    pub ep_exts: Vec<String>,
 }
 
-pub fn run(c: &Config) -> Result<i32> {
+pub fn run() -> Result<'static, ()> {
+    let c = Config::parse();
+    debug!("get config: {:?}", c);
+
     let key_extractor = key::RegexExtractor::new(&c.patterns)?;
     let fileinfo_constructor = file::FileInfoConstructor::new(&key_extractor);
 
+    info!("start get subtitle file info");
     let mut subtitle_fileinfo_list = fileinfo_constructor.from_dir(&c.dir, &c.sub_exts)?;
-    debug!("subtitle files: {:?}", subtitle_fileinfo_list);
+    info!("subtitle file info: {:?}", subtitle_fileinfo_list);
 
     let mut subtitles_map = HashMap::new();
     while subtitle_fileinfo_list.len() > 0 {
@@ -54,18 +60,19 @@ pub fn run(c: &Config) -> Result<i32> {
         subtitles_map.insert(key, subtitle_fileinfo_list.swap_remove(0)); // TODO: check existense
     }
 
-    let movie_fileinfo_list = fileinfo_constructor.from_dir(&c.dir, &c.episode_exts)?;
-    debug!("movie files: {:?}", movie_fileinfo_list);
+    info!("start get episode file info");
+    let episode_fileinfo_list = fileinfo_constructor.from_dir(&c.dir, &c.ep_exts)?;
+    info!("episode file info: {:?}", episode_fileinfo_list);
 
-    for ref movie_fileinfo in movie_fileinfo_list {
-        if let Some(subtitle_fileinfo) = subtitles_map.get(&movie_fileinfo.key) {
-            let mut subtitle_new_path = PathBuf::from(&movie_fileinfo.filepath);
+    for ref episode_fileinfo in episode_fileinfo_list {
+        if let Some(subtitle_fileinfo) = subtitles_map.get(&episode_fileinfo.key) {
+            let mut subtitle_new_path = PathBuf::from(&episode_fileinfo.filepath);
             subtitle_new_path.set_extension(&subtitle_fileinfo.extension);
 
             info!(
                 "{} -> {}\n\tfrom => {}\n\tto => {:?}",
-                &movie_fileinfo.filepath,
-                movie_fileinfo.key,
+                &episode_fileinfo.filepath,
+                episode_fileinfo.key,
                 subtitle_fileinfo.filepath,
                 subtitle_new_path,
             );
@@ -78,5 +85,5 @@ pub fn run(c: &Config) -> Result<i32> {
         }
     }
 
-    return Ok(0);
+    return Ok(());
 }

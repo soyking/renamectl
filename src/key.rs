@@ -105,7 +105,7 @@ mod tests {
                     r"(?i)S0(\d{1})(?i)E(\d{2})".to_string(),
                     r"(?i)S(\d{1})(?i)E(\d{2})".to_string(),
                     r"(\d{1})(?i)x(\d{2})".to_string(),
-                     r"(\d{1})(\d{2})".to_string(),
+                    r"(\d{1})(\d{2})".to_string(),
                 ],
                 expected_key: Some("4-02".to_string()),
             },

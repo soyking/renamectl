@@ -3,6 +3,7 @@ use std::path;
 
 use anyhow::Context;
 
+use crate::error::Error;
 use crate::error::Result;
 use crate::key;
 
@@ -23,67 +24,68 @@ impl FileInfoConstructor<'_> {
     }
 
     pub fn from_dir(&self, dir: &str, extensions: &Vec<String>) -> Result<Vec<FileInfo>> {
-        let paths = fs::read_dir(dir).with_context(|| format!("read dir {}", dir))?;
+        let dir_entries = fs::read_dir(dir).with_context(|| format!("read dir {}", dir))?;
 
-        return self.from_paths(paths, extensions);
+        return self.from_paths(dir_entries, extensions);
     }
 
-    fn from_paths(&self, paths: fs::ReadDir, extensions: &Vec<String>) -> Result<Vec<FileInfo>> {
-        let mut ret = Vec::<FileInfo>::new();
-        for path in paths {
-            let filepath = path
+    fn from_paths(
+        &self,
+        dir_entries: fs::ReadDir,
+        extensions: &Vec<String>,
+    ) -> Result<Vec<FileInfo>> {
+        let mut file_info_list = vec![];
+        for dir_entry in dir_entries {
+            let file_path = dir_entry
                 .with_context(|| format!("get filepath from dir entry"))?
                 .path();
 
-            if let Some(fileinfo) = self.gen_fileinfo(filepath, extensions)? {
-                ret.push(fileinfo);
+            match self.gen_fileinfo(&file_path, extensions) {
+                Ok(fileinfo) => file_info_list.push(fileinfo),
+                Err(err) => debug!("failed to gen file({:?}) info: {:?}", file_path, err),
             }
         }
 
-        Ok(ret)
+        Ok(file_info_list)
     }
 
     fn gen_fileinfo(
         &self,
-        filepath: path::PathBuf,
+        file_path: &path::PathBuf,
         extensions: &Vec<String>,
-    ) -> Result<Option<FileInfo>> {
-        if let Some(filepath_extenstion) = filepath.extension() {
-            for extension in extensions {
-                if filepath_extenstion != extension.as_str() {
-                    continue;
-                }
+    ) -> Result<FileInfo> {
+        let file_ext = file_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .ok_or(Error::msg("without extension"))?;
 
-                if let Some(full_filepath_str) = filepath.to_str() {
-                    if let Some(filename_str) = filepath.file_name() {
-                        let filename_str = filename_str.to_str().unwrap();
-                        if let Some(key) = self.key_extractor.extract(filename_str) {
-                            return Ok(Some(FileInfo {
-                                filepath: full_filepath_str.to_string(),
-                                extension: extension.to_string(),
-                                key,
-                            }));
-                        } else {
-                            debug!(
-                                "extractor returns none, skip filepath {:?}",
-                                full_filepath_str
-                            );
-
-                            return Ok(None);
-                        }
-                    }
-                }
-            }
-
-            debug!(
-                "does not match any extensions, skip file {:?}, extension: {:?}",
-                filepath, filepath_extenstion
-            );
-        } else {
-            debug!("without extension, skip file {:?}", filepath);
+        if !extensions.contains(&file_ext.to_string()) {
+            return Result::Err(Error::msg(format!(
+                "ignore file with extension {:?}",
+                file_ext,
+            )));
         }
 
-        Ok(None)
+        let full_file_path = file_path
+            .to_str()
+            .ok_or(Error::msg("failed to get file full path"))?;
+        let filename = file_path
+            .file_name()
+            .and_then(|e| e.to_str())
+            .ok_or(Error::msg("file to get file name"))?;
+        let key = self
+            .key_extractor
+            .extract(filename)
+            .ok_or(Error::msg(format!(
+                "failed to extract key from file name: {:?}",
+                filename
+            )))?;
+
+        return Ok(FileInfo {
+            filepath: full_file_path.to_string(),
+            extension: file_ext.to_string(),
+            key,
+        });
     }
 }
 
@@ -111,11 +113,10 @@ mod tests {
 
         let filepath = "test";
         let fileinfo = fileinfo_constructor.gen_fileinfo(
-            path::PathBuf::from(filepath.to_string()),
+            &path::PathBuf::from(filepath.to_string()),
             &vec!["txt".to_string()],
         );
-        assert_eq!(true, fileinfo.is_ok());
-        assert_eq!(true, fileinfo.unwrap().is_none());
+        assert_eq!(false, fileinfo.is_ok());
     }
 
     #[test]
@@ -126,11 +127,10 @@ mod tests {
 
         let filepath = "test.txt";
         let fileinfo = fileinfo_constructor.gen_fileinfo(
-            path::PathBuf::from(filepath.to_string()),
+            &path::PathBuf::from(filepath.to_string()),
             &vec!["png".to_string()],
         );
-        assert_eq!(true, fileinfo.is_ok());
-        assert_eq!(true, fileinfo.unwrap().is_none());
+        assert_eq!(false, fileinfo.is_ok());
     }
 
     #[test]
@@ -141,11 +141,10 @@ mod tests {
 
         let filepath = "test.txt";
         let fileinfo = fileinfo_constructor.gen_fileinfo(
-            path::PathBuf::from(filepath.to_string()),
+            &path::PathBuf::from(filepath.to_string()),
             &vec!["txt".to_string()],
         );
-        assert_eq!(true, fileinfo.is_ok());
-        assert_eq!(true, fileinfo.unwrap().is_none());
+        assert_eq!(false, fileinfo.is_ok());
     }
 
     #[test]
@@ -159,13 +158,10 @@ mod tests {
 
         let filepath = "./dir/test.txt";
         let fileinfo = fileinfo_constructor.gen_fileinfo(
-            path::PathBuf::from(filepath.to_string()),
+            &path::PathBuf::from(filepath.to_string()),
             &vec!["txt".to_string()],
         );
         assert_eq!(true, fileinfo.is_ok());
-
-        let fileinfo = fileinfo.unwrap();
-        assert_eq!(true, fileinfo.is_some());
 
         let fileinfo = fileinfo.unwrap();
         println!("return file info: {:?}", fileinfo);
