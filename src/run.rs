@@ -14,11 +14,11 @@ fn copy_file<'a>(from: &'a str, to: &'a str) -> Result<'a, u64> {
     let meta = fs::metadata(from)?;
     let user_id = meta.uid();
     let group_id = meta.gid();
-    println!("uid: {}, gid: {}", user_id, group_id);
+    debug!("uid: {}, gid: {}", user_id, group_id);
     unixfs::chown(to, Some(user_id), Some(group_id))?;
 
     let perms = fs::metadata(from)?.permissions();
-    println!("perm: {:?}", perms);
+    debug!("perm: {:?}", perms);
     fs::set_permissions(to, perms)?;
 
     Ok(0)
@@ -46,8 +46,7 @@ pub fn run(c: &Config) -> Result<i32> {
     let fileinfo_constructor = file::FileInfoConstructor::new(&key_extractor);
 
     let mut subtitle_fileinfo_list = fileinfo_constructor.from_dir(&c.dir, &c.sub_exts)?;
-    // debug
-    println!("subtitle files: {:?}", subtitle_fileinfo_list);
+    debug!("subtitle files: {:?}", subtitle_fileinfo_list);
 
     let mut subtitles_map = HashMap::new();
     while subtitle_fileinfo_list.len() > 0 {
@@ -56,14 +55,14 @@ pub fn run(c: &Config) -> Result<i32> {
     }
 
     let movie_fileinfo_list = fileinfo_constructor.from_dir(&c.dir, &c.episode_exts)?;
-    println!("movie files: {:?}", movie_fileinfo_list);
+    debug!("movie files: {:?}", movie_fileinfo_list);
 
     for ref movie_fileinfo in movie_fileinfo_list {
         if let Some(subtitle_fileinfo) = subtitles_map.get(&movie_fileinfo.key) {
             let mut subtitle_new_path = PathBuf::from(&movie_fileinfo.filepath);
             subtitle_new_path.set_extension(&subtitle_fileinfo.extension);
 
-            println!(
+            info!(
                 "{} -> {}\n\tfrom => {}\n\tto => {:?}",
                 &movie_fileinfo.filepath,
                 movie_fileinfo.key,

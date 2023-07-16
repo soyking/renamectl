@@ -64,8 +64,7 @@ impl FileInfoConstructor<'_> {
                                 key,
                             }));
                         } else {
-                            // debug
-                            println!(
+                            debug!(
                                 "extractor returns none, skip filepath {:?}",
                                 full_filepath_str
                             );
@@ -76,14 +75,12 @@ impl FileInfoConstructor<'_> {
                 }
             }
 
-            // debug
-            println!(
+            debug!(
                 "does not match any extensions, skip file {:?}, extension: {:?}",
                 filepath, filepath_extenstion
             );
         } else {
-            // debug
-            println!("without extension, skip file {:?}", filepath);
+            debug!("without extension, skip file {:?}", filepath);
         }
 
         Ok(None)

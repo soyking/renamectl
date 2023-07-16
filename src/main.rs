@@ -8,15 +8,19 @@ mod run;
 use clap::Parser;
 use std::process::exit;
 
+#[macro_use]
+extern crate log;
+
 fn main() {
+    env_logger::init();
+
     let c = run::Config::parse();
-    // debug
-    println!("get config: {:?}", c);
+    debug!("get config: {:?}", c);
 
     match run::run(&c) {
-        Ok(_) => println!("done"),
+        Ok(_) => info!("done"),
         Err(e) => {
-            println!("catch some error: {:?}", e);
+            error!("Failed: {:?}", e);
             exit(1);
         }
     };
